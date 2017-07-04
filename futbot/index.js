@@ -8,7 +8,7 @@ const welcome_image_url = "";
 const correct_msg = "That's correct! :)";
 const incorrect_msg = "That's not the answer :(";
 const out_of_time = "Ups, out of time ⏰";
-const wait_time = 15;
+const wait_time = 15;  // in seconds
 
 function save_custom (user) {
   user.markModified('custom');
@@ -238,38 +238,3 @@ mbot.listen({text: /.+/g}, (event) => {
   });
   
 });
-
-
-// mbot.listen({text: "stop"}, (event) => {
-
-//   mbot.sendText(event.user, "I'll stop responding")
-//   .then(() => {
-//     return mbot.setIgnored(event.user, true, "start")
-//   })
-// });
-
-// mbot.listen({text: "give me suplies"}, (event) => {
-//    rp(options).then(function (response) {
-//                 response.results.forEach(function(suplie,i){
-//                   msg = `I got you ${suplie.title} : ${suplie.msg}`; 
-//                   mbot.sendText(event.user, msg)
-//                   .then(()=>{
-//                     mbot.listen({text: "1st"}, (event) => {
-//                       suplie=response.results[0];
-//                       msg = `this ${suplie.title} : ${suplie.msg}`;
-//                       mbot.sendText(event.user, msg);
-//                     });
-
-//                   });
-//                 });    
-//              })
-//              .catch(function (err) {
-//                 console.log(`Mmm somethings not right:${err}`)
-//                });
-  
-// });
-
-// It is IMPORTANT than this, the default is the last listener
-// mbot.listen({text: /.+/g}, (event) => {
-//   mbot.sendText(event.user, event.text)
-// });
