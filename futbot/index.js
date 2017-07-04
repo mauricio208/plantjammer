@@ -2,16 +2,6 @@ const Mbot = require('mbot');
 const rp = require('request-promise');
 const mbot = new Mbot({name: 'mm-test-bot'});
 
-let options = {
-    uri: 'https://parseapi.back4app.com/classes/QandAs',
-    qs: {},
-    headers: {
-        'User-Agent': 'Request-Promise',
-        'X-Parse-Application-Id': '9s5UU3DLIpN9OOipFmPHUNt0628JQfxtaT5jSu0P',
-        'X-Parse-REST-API-Key': 'WAUiyA02cYY7c8PqNxlvhVM7TJYTjf3Td297p8qO'
-    },
-    json: true // Automatically parses the JSON string in the response 
-};
 
 function save_custom (user) {
   user.markModified('custom');
@@ -47,9 +37,7 @@ function init_trivia_data (user) {
     user.custom.futbot.questions_answered=[];
     user.custom.futbot.actual_points=0;
   }
-  save_custom(user);
-  return user; 
-
+  return save_custom(user);
 }
 
 function store_trivia_data (user, question_id,point) {
@@ -64,46 +52,60 @@ function store_trivia_data (user, question_id,point) {
     save_custom(user); 
   }
   user.custom.futbot.questions_answered.push(question_id);
-  user.custom.futbot.actual_points += point;
-  save_custom(user);
-  return user; 
+  user.custom.futb
+  ot.actual_points += point;
+  return save_custom(user);
 }
 
 function store_best_round(user) {
   let points = user.custom.futbot.actual_points;
   let max = user.custom.futbot.best_round;
   user.custom.futbot.best_round = points >= max ? points:max;
-  save_custom(user);
+  return save_custom(user);
 }
 
 function request_trivia(user) {
+  let options = {
+    uri: 'https://parseapi.back4app.com/classes/QandAs',
+    qs: {},
+    headers: {
+        'User-Agent': 'Request-Promise',
+        'X-Parse-Application-Id': '9s5UU3DLIpN9OOipFmPHUNt0628JQfxtaT5jSu0P',
+        'X-Parse-REST-API-Key': 'WAUiyA02cYY7c8PqNxlvhVM7TJYTjf3Td297p8qO'
+    },
+    json: true // Automatically parses the JSON string in the response 
+  };
+
   let q=user.custom.futbot.questions_answered;
   let query=JSON.stringify({objectId:{$nin:q}})
   options.qs={where:query}
   return options;
 }
 
+function store_question_data(user,question) {
+  user.custom.futbot_anstime= Date();
+  user.custom.futbot_correct_ans= question.correct_answer;
+  user.custom.futbot_qst=question.objectId; 
+  return save_custom(user);
+}
 
 function ask_question(event,user) {
-  rp(request_trivia(user)).then((response)=>{
+  return rp(request_trivia(user)).then((response)=>{
     if (response.results.length === 0) {
-      store_best_round(user);
-      msg = `Score:${user.custom.futbot.actual_points}, Max Score:${user.custom.futbot.best_round}`
-      console.log(msg);
-      mbot.sendText(event.user,msg);
+      store_best_round(user).then(()=>{
+        msg = `Score:${user.custom.futbot.actual_points}, Max Score:${user.custom.futbot.best_round}`
+        mbot.sendText(event.user,msg);
+      });
     }else{
       i=rand_index(response.results);
-      question = response.results[i];
+      let question = response.results[i];
       msg=question.question;
-      mbot.sendText(event.user,msg,get_answers(question.options))
-      .then(()=>{
-        user.custom.futbot_anstime= Date();
-        user.custom.futbot_correct_ans= question.correct_answer;
-        user.custom.futbot_qst=question.objectId; 
-        save_custom(user);
-      });
+      store_question_data(user,question).then(
+        // mbot.sendImage(event.user,question.image)
+
+        mbot.sendText(event.user,msg,get_answers(question.options))
+       );   
     }
-    
   });
 }
 
@@ -136,7 +138,12 @@ mbot.listen({text: "t"}, (event) => {
   return mbot.getUser(event.user)
     .then(user => {
       mbot.sendText(event.user, "Trivia begins")
-      .then(ask_question(event,init_trivia_data(user)));
+      .then(()=>{
+        return init_trivia_data(user)
+          .then(user =>{
+             ask_question(event,user);
+          })  
+        });
       return user
     })
     .then(user => {
@@ -147,17 +154,21 @@ mbot.listen({text: "t"}, (event) => {
 mbot.listen({text: /.+/g}, (event) => {
   return mbot.getUser(event.user)
   .then(user=>{
-    if (options.text in user.custom.futbot_correct_ans) {
+    if (user.custom.futbot_correct_ans.includes(event.text)) {
       store_trivia_data(user,user.custom.futbot_qst,1)
       console.log(user.custom.futbot.questions_answered);
       mbot.sendText(event.user, "correct")
-      .then(ask_question(event,user));
+      .then(
+          ask_question(event,user)
+        );
 
     }else{
       store_trivia_data(user,user.custom.futbot_qst,0);
       console.log(user.custom.futbot.questions_answered);
       mbot.sendText(event.user, "not correct")
-        .then(ask_question(event,user));
+        .then(
+          ask_question(event,user)
+        );
     }
   });
   
