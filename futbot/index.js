@@ -10,6 +10,19 @@ const incorrect_msg = "That's not the answer :(";
 const out_of_time = "Ups, out of time ⏰";
 const wait_time = 15;  // in seconds
 
+const sett = (resolve, t) => {
+  setTimeout((resolve) => {
+    console.log('after t seconds');
+  }, t)
+}
+
+function delay(t) {
+  return new Promise((resolve) => {
+    sett(resolve, t)
+  });
+}
+
+
 function save_custom (user) {
   user.markModified('custom');
   return user.save()
@@ -68,6 +81,7 @@ function store_trivia_data (user, question_id,point) {
   }
   user.custom.futbot.questions_answered.push(question_id);
   user.custom.futbot.actual_points += point;
+  user.custom.futbot_qasnwered = true
   return save_custom(user);
 }
 
@@ -100,7 +114,8 @@ function request_trivia(user) {
 function store_question_data(user,question) {
   user.custom.futbot_anstime= Date();
   user.custom.futbot_correct_ans= question.correct_answer;
-  user.custom.futbot_qst=question.objectId; 
+  user.custom.futbot_qst=question.objectId;
+  user.custom.futbot_qasnwered = false 
   return save_custom(user);
 }
 
@@ -157,6 +172,28 @@ function ask_question(event,user) {
   });
 }
 
+function timer(event) {
+  console.log('here');
+  return mbot.getUser(event.user)
+          .then(user=>{
+           return delay(wait_time)
+                  .then((user)=>{
+                    if (!user.custom.futbot_qasnwered) {
+                      console.log('Out of time')
+                      user.custom.futbot.trivia_on
+                      return save_custom(user)
+                        .then(()=>{
+                          return welcome()
+                            .then(()=>{
+                                  return Promise.resolve();
+                            });
+                        })
+                    }else{
+                      console.log('Its ok')
+                    }
+                  })
+        })
+}
 
 mbot.start()
 .then(() => {
@@ -190,7 +227,13 @@ mbot.listen({text: "TRIVIA_START_PAYLOAD"}, (event) => {
       .then(()=>{
         return init_trivia_data(user)
           .then(user =>{
-             return ask_question(event,user);
+             return ask_question(event,user)
+                    .then(()=>{
+                      return timer(event)
+                      .then(()=>{
+                        console.log('timer_set')
+                      })
+                    })
           })  
         });
     });
@@ -209,22 +252,35 @@ mbot.listen({text: /.+/g}, (event) => {
             .then(user=>{
               return mbot.sendText(event.user, correct_msg)
                       .then(()=>{
-                       return ask_question(event,user) 
+                       return ask_question(event,user)
+                               .then(()=>{
+                                  return timer(event);
+                                }) 
                       })
               });
           
 
         }else{
+          user.custom.trivia_on=false
           msg=incorrect_msg
           if (!on_time)
             msg=out_of_time;
-          store_trivia_data(user,user.custom.futbot_qst,0)
-            .then(user=>{
-              return mbot.sendText(event.user, msg)
+          return save_custom(user)
+                  .then(user=>{
+                    return mbot.sendText(event.user, msg)
                       .then(()=>{
-                        return ask_question(event,user)
+                        return store_best_round(user).then(()=>{
+                          msg = `Score:${user.custom.futbot.actual_points}, Max Score:${user.custom.futbot.best_round}`
+                          return mbot.sendText(event.user, msg)
+                            .then(()=>{
+                              return welcome(event)
+                                .then(()=>{
+                                  return Promise.resolve();
+                                })
+                            });
+                        });
                       })
-            });
+                  });
         }
       }else{
         return welcome(event)
