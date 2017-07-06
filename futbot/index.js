@@ -166,8 +166,9 @@ function timer(event) {
         .then(()=> mbot.getUser(event.user))
         .then(user=>{
           if (!user.custom.futbot_qanswered) {
-            user.custom.futbot.trivia_on = false
+            user.custom.futbot.trivia_on = false;
             user.custom.futbot.out_of_time = true;
+            user.custom.futbot_qanswered = true;
             return save_custom(user)
               .then(()=>mbot.sendText(event.user, out_of_time))
               .then(()=>{
@@ -249,7 +250,6 @@ mbot.listen({text: /.+/g}, (event) => {
         }else{
           user.custom.futbot.trivia_on=false
           user.custom.futbot_qanswered = true;
-          user.custom.futbot_qanswered_date = Date();
           msg=incorrect_msg
           return save_custom(user)
                   .then(user=>{
