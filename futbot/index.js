@@ -8,12 +8,10 @@ const welcome_image_url = "";
 const correct_msg = "That's correct! :)";
 const incorrect_msg = "That's not the answer :(";
 const out_of_time = "Ups, out of time ⏰";
-const wait_time = 15;  // in seconds
+const wait_time = 11;  // in seconds
 
 const sett = (resolve, t) => {
-  setTimeout((resolve) => {
-    console.log('after t seconds');
-  }, t)
+  setTimeout(resolve, t)
 }
 
 function delay(t) {
@@ -32,11 +30,6 @@ function rand_index (arr) {
   return Math.trunc(Math.random()*arr.length);
 }
 
-function date_diff (ans_date, actual_date) {
-  d1 = new Date(actual_date);
-  d2 = new Date(ans_date);
-  return (d1.getTime()-d2.getTime())/1000
-}
 
 function get_answers(ans) {
   let answers = [];
@@ -54,16 +47,18 @@ function init_trivia_data (user) {
   if (user.custom === undefined) {
     user.custom={
         futbot: {
-        questions_answered:[],
-        actual_points: 0,
-        best_round: 0,
-        trivia_on: false,
+          questions_answered:[],
+          actual_points: 0,
+          best_round: 0,
+          trivia_on: false,
       }
     }
   }else{
     user.custom.futbot.questions_answered=[];
     user.custom.futbot.actual_points=0;
     user.custom.futbot.trivia_on = true;
+    user.custom.futbot.out_of_time = false;
+
   }
   return save_custom(user);
 }
@@ -81,7 +76,8 @@ function store_trivia_data (user, question_id,point) {
   }
   user.custom.futbot.questions_answered.push(question_id);
   user.custom.futbot.actual_points += point;
-  user.custom.futbot_qasnwered = true
+  user.custom.futbot_qanswered = true;
+
   return save_custom(user);
 }
 
@@ -89,7 +85,7 @@ function store_best_round(user) {
   let points = user.custom.futbot.actual_points;
   let max = user.custom.futbot.best_round;
   user.custom.futbot.best_round = points >= max ? points:max;
-  user.custom.trivia_on = false;
+  user.custom.futbot.trivia_on = false;
   return save_custom(user);
 }
 
@@ -115,7 +111,7 @@ function store_question_data(user,question) {
   user.custom.futbot_anstime= Date();
   user.custom.futbot_correct_ans= question.correct_answer;
   user.custom.futbot_qst=question.objectId;
-  user.custom.futbot_qasnwered = false 
+  user.custom.futbot_qanswered = false 
   return save_custom(user);
 }
 
@@ -173,23 +169,28 @@ function ask_question(event,user) {
 }
 
 function timer(event) {
-  console.log('here');
-  return mbot.getUser(event.user)
-          .then(user=>{
-           return delay(wait_time)
-                  .then((user)=>{
-                    if (!user.custom.futbot_qasnwered) {
-                      console.log('Out of time')
-                      user.custom.futbot.trivia_on
+  return delay(wait_time*1000)
+          .then(()=>{
+            return mbot.getUser(event.user)
+                  .then(user=>{
+                    if (!user.custom.futbot_qanswered) {
+                      user.custom.futbot.trivia_on = false
+                      user.custom.futbot.out_of_time = true;
+
                       return save_custom(user)
                         .then(()=>{
-                          return welcome()
-                            .then(()=>{
-                                  return Promise.resolve();
-                            });
+                          return mbot.sendText(event.user, out_of_time)
+                                  .then(()=>{
+                                    msg = `Score:${user.custom.futbot.actual_points}, Max Score:${user.custom.futbot.best_round}`
+                                    return mbot.sendText(event.user, msg)
+                                      .then(()=>{
+                                            return welcome(event)
+                                            .then(()=>{
+                                                  return Promise.resolve();
+                                            });
+                                    });
+                                  })
                         })
-                    }else{
-                      console.log('Its ok')
                     }
                   })
         })
@@ -230,9 +231,6 @@ mbot.listen({text: "TRIVIA_START_PAYLOAD"}, (event) => {
              return ask_question(event,user)
                     .then(()=>{
                       return timer(event)
-                      .then(()=>{
-                        console.log('timer_set')
-                      })
                     })
           })  
         });
@@ -246,8 +244,7 @@ mbot.listen({text: /.+/g}, (event) => {
       welcome(event);
     }else{
       if (user.custom.futbot.trivia_on) {
-        on_time = date_diff(user.custom.futbot_anstime,Date()) < wait_time
-        if (user.custom.futbot_correct_ans.includes(event.text) && on_time) {
+        if (user.custom.futbot_correct_ans.includes(event.text)) {
           store_trivia_data(user,user.custom.futbot_qst,1)
             .then(user=>{
               return mbot.sendText(event.user, correct_msg)
@@ -261,32 +258,39 @@ mbot.listen({text: /.+/g}, (event) => {
           
 
         }else{
-          user.custom.trivia_on=false
+          user.custom.futbot.trivia_on=false
+          user.custom.futbot_qanswered = true;
+          user.custom.futbot_qanswered_date = Date();
           msg=incorrect_msg
-          if (!on_time)
-            msg=out_of_time;
           return save_custom(user)
                   .then(user=>{
-                    return mbot.sendText(event.user, msg)
+                    return store_best_round(user) 
                       .then(()=>{
-                        return store_best_round(user).then(()=>{
+                        return mbot.sendText(event.user, msg)
+                        .then(()=>{
                           msg = `Score:${user.custom.futbot.actual_points}, Max Score:${user.custom.futbot.best_round}`
                           return mbot.sendText(event.user, msg)
                             .then(()=>{
-                              return welcome(event)
-                                .then(()=>{
-                                  return Promise.resolve();
-                                })
+                              if (!user.custom.futbot.out_of_time){
+                                return welcome(event)
+                                  .then(()=>{
+                                    return Promise.resolve();
+                                  });
+                              }
+                              return Promise.resolve();
                             });
                         });
                       })
                   });
         }
       }else{
-        return welcome(event)
+        if (!user.custom.futbot.out_of_time) {
+          return welcome(event)
               .then(()=>{
                 return Promise.resolve();
               });
+        }
+        return Promise.resolve();
       }
     }
   });
