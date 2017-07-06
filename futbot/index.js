@@ -8,7 +8,7 @@ const welcome_image_url = "";
 const correct_msg = "That's correct! :)";
 const incorrect_msg = "That's not the answer :(";
 const out_of_time = "Ups, out of time ⏰";
-const wait_time = 11;  // in seconds
+const wait_time = 12;  // in seconds
 
 const sett = (resolve, t) => {
   setTimeout(resolve, t)
@@ -142,58 +142,43 @@ function welcome (event) {
 function ask_question(event,user) {
   return rp(request_trivia(user)).then((response)=>{
     if (response.results.length === 0) {
-      store_best_round(user).then(()=>{
-        msg = `Score:${user.custom.futbot.actual_points}, Max Score:${user.custom.futbot.best_round}`
-        return mbot.sendText(event.user, msg)
-          .then(()=>{
-            return welcome(event)
-              .then(()=>{
-                return Promise.resolve();
-              })
-          });
-      });
+      return store_best_round(user)
+        .then(user=>{
+          msg = `Score:${user.custom.futbot.actual_points}, Max Score:${user.custom.futbot.best_round}`
+          return mbot.sendText(event.user, msg)
+        })
+        .then(()=> welcome(event))
+        .then(()=>Promise.resolve());
     }else{
       i=rand_index(response.results);
       let question = response.results[i];
       let msg=question.question;
       payload = template_payload("Question",msg,question.image.url)
       return mbot.sendTemplate(event.user,payload,get_answers(question.options))
-        .then(()=>{
-          return store_question_data(user,question)
-            .then(()=>{
-              return Promise.resolve();
-            })
-        });   
+        .then(()=>store_question_data(user,question))
+        .then(()=>timer(event));  
     }
   });
 }
 
 function timer(event) {
   return delay(wait_time*1000)
-          .then(()=>{
-            return mbot.getUser(event.user)
-                  .then(user=>{
-                    if (!user.custom.futbot_qanswered) {
-                      user.custom.futbot.trivia_on = false
-                      user.custom.futbot.out_of_time = true;
-
-                      return save_custom(user)
-                        .then(()=>{
-                          return mbot.sendText(event.user, out_of_time)
-                                  .then(()=>{
-                                    msg = `Score:${user.custom.futbot.actual_points}, Max Score:${user.custom.futbot.best_round}`
-                                    return mbot.sendText(event.user, msg)
-                                      .then(()=>{
-                                            return welcome(event)
-                                            .then(()=>{
-                                                  return Promise.resolve();
-                                            });
-                                    });
-                                  })
-                        })
-                    }
-                  })
-        })
+        .then(()=> mbot.getUser(event.user))
+        .then(user=>{
+          if (!user.custom.futbot_qanswered) {
+            user.custom.futbot.trivia_on = false
+            user.custom.futbot.out_of_time = true;
+            return save_custom(user)
+              .then(()=>mbot.sendText(event.user, out_of_time))
+              .then(()=>{
+                msg = `Score:${user.custom.futbot.actual_points}, Max Score:${user.custom.futbot.best_round}`
+                return mbot.sendText(event.user, msg)
+                })
+              .then(()=> welcome(event))
+              .then(()=> Promise.resolve());
+          }
+          return Promise.resolve();
+        });
 }
 
 mbot.start()
@@ -224,16 +209,29 @@ mbot.start()
 mbot.listen({text: "TRIVIA_START_PAYLOAD"}, (event) => {
   return mbot.getUser(event.user)
     .then(user => {
-      mbot.sendText(event.user, "Trivia begins")
-      .then(()=>{
-        return init_trivia_data(user)
-          .then(user =>{
-             return ask_question(event,user)
-                    .then(()=>{
-                      return timer(event)
-                    })
-          })  
-        });
+      if (user.custom == null) {
+         return mbot.sendText(event.user, "Trivia begins")
+                .then(()=>init_trivia_data(user))
+                .then(user => ask_question(event,user))
+      }
+
+      if (user.custom.futbot == null){
+        return mbot.sendText(event.user, "Trivia begins")
+              .then(()=>init_trivia_data(user))
+              .then(user => ask_question(event,user))
+      }
+
+      if (!user.custom.futbot.trivia_on) {
+        // if (!user.custom.futbot.out_of_time) {
+        //   return mbot.sendText(event.user, "Trivia begins")
+        //       .then(()=>init_trivia_data(user))
+        //       .then(user => ask_question(event,user))
+        // }
+        return mbot.sendText(event.user, "Trivia begins")
+              .then(()=>init_trivia_data(user))
+              .then(user => ask_question(event,user))
+      }
+      
     });
   });
 
@@ -245,18 +243,9 @@ mbot.listen({text: /.+/g}, (event) => {
     }else{
       if (user.custom.futbot.trivia_on) {
         if (user.custom.futbot_correct_ans.includes(event.text)) {
-          store_trivia_data(user,user.custom.futbot_qst,1)
-            .then(user=>{
-              return mbot.sendText(event.user, correct_msg)
-                      .then(()=>{
-                       return ask_question(event,user)
-                               .then(()=>{
-                                  return timer(event);
-                                }) 
-                      })
-              });
-          
-
+          return store_trivia_data(user,user.custom.futbot_qst,1)
+            .then(user=> mbot.sendText(event.user, correct_msg))
+            .then(()=>ask_question(event,user));
         }else{
           user.custom.futbot.trivia_on=false
           user.custom.futbot_qanswered = true;
@@ -264,31 +253,25 @@ mbot.listen({text: /.+/g}, (event) => {
           msg=incorrect_msg
           return save_custom(user)
                   .then(user=>{
-                    return store_best_round(user) 
-                      .then(()=>{
-                        return mbot.sendText(event.user, msg)
-                        .then(()=>{
-                          msg = `Score:${user.custom.futbot.actual_points}, Max Score:${user.custom.futbot.best_round}`
-                          return mbot.sendText(event.user, msg)
-                            .then(()=>{
-                              if (!user.custom.futbot.out_of_time){
-                                return welcome(event)
-                                  .then(()=>{
-                                    return Promise.resolve();
-                                  });
-                              }
-                              return Promise.resolve();
-                            });
-                        });
-                      })
+                    return store_best_round(user)
+                  })
+                  .then(()=> mbot.sendText(event.user, msg))
+                  .then(()=>{
+                    msg = `Score:${user.custom.futbot.actual_points}, Max Score:${user.custom.futbot.best_round}`
+                    return mbot.sendText(event.user, msg)
+                  })
+                  .then(() => mbot.getUser(event.user))
+                  .then(user => {
+                    if (!user.custom.futbot.out_of_time){
+                      return welcome(event)
+                    }
+                    return Promise.resolve();
                   });
         }
       }else{
         if (!user.custom.futbot.out_of_time) {
           return welcome(event)
-              .then(()=>{
-                return Promise.resolve();
-              });
+              .then(()=> Promise.resolve());
         }
         return Promise.resolve();
       }
