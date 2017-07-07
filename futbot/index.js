@@ -8,7 +8,7 @@ const welcome_image_url = "";
 const correct_msg = "That's correct! :)";
 const incorrect_msg = "That's not the answer :(";
 const out_of_time = "Ups, out of time ⏰";
-const wait_time = 12;  // in seconds
+const wait_time = 14;  // in seconds
 
 const sett = (resolve, t) => {
   setTimeout(resolve, t)
@@ -165,18 +165,20 @@ function timer(event) {
   return delay(wait_time*1000)
         .then(()=> mbot.getUser(event.user))
         .then(user=>{
-          if (!user.custom.futbot_qanswered) {
-            user.custom.futbot.trivia_on = false;
-            user.custom.futbot.out_of_time = true;
-            user.custom.futbot_qanswered = true;
-            return save_custom(user)
-              .then(()=>mbot.sendText(event.user, out_of_time))
-              .then(()=>{
-                msg = `Score:${user.custom.futbot.actual_points}, Max Score:${user.custom.futbot.best_round}`
-                return mbot.sendText(event.user, msg)
-                })
-              .then(()=> welcome(event))
-              .then(()=> Promise.resolve());
+          if (!user.custom.futbot.out_of_time) {
+            if (!user.custom.futbot_qanswered) {
+              user.custom.futbot.trivia_on = false;
+              user.custom.futbot.out_of_time = true;
+              user.custom.futbot_qanswered = true;
+              return save_custom(user)
+                .then(()=>mbot.sendText(event.user, out_of_time))
+                .then(()=>{
+                  msg = `Score:${user.custom.futbot.actual_points}, Max Score:${user.custom.futbot.best_round}`
+                  return mbot.sendText(event.user, msg)
+                  })
+                .then(()=> welcome(event))
+                .then(()=> Promise.resolve());
+            }
           }
           return Promise.resolve();
         });
