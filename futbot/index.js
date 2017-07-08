@@ -9,6 +9,8 @@ const correct_msg = "That's correct! :)";
 const incorrect_msg = "That's not the answer :(";
 const out_of_time = "Ups, out of time ⏰";
 const wait_time = 12;  // in seconds
+const rules_text_button = "What are the rules?";
+const rules = `You have 7 seconds to answer each question \nEvery good answer give you a point \nIf your answer is wrong, end of game, you have to start all over again`;
 
 const sett = (resolve, t) => {
   setTimeout(resolve, t)
@@ -65,10 +67,6 @@ function init_trivia_data (user) {
     user.custom.futbot.trivia_on = true;
     user.custom.futbot.out_of_time = false;
     user.custom.futbot_qanswered = false;
-    user.custom.futbot_qansweredTime = null;
-    user.custom.futbot_anstime = null;
-    user.custom.futbot_qanswered_id = null;
-
   }
   return save_custom(user);
 }
@@ -87,8 +85,6 @@ function store_trivia_data (user, question_id,point) {
   user.custom.futbot.questions_answered.push(question_id);
   user.custom.futbot.actual_points += point;
   user.custom.futbot_qanswered = true;
-  user.custom.futbot_qansweredTime = Date();
-  user.custom.futbot_qanswered_id = question_id;
 
   return save_custom(user);
 }
@@ -120,7 +116,6 @@ function request_trivia(user) {
 }
 
 function store_question_data(user,question) {
-  user.custom.futbot_anstime= Date();
   user.custom.futbot_correct_ans= question.correct_answer;
   user.custom.futbot_qst=question.objectId;
   user.custom.futbot_qanswered = false ;
@@ -147,8 +142,11 @@ function welcome (event) {
                 "title":"Start Trivia",
                 "payload":"TRIVIA_START_PAYLOAD"
               }]
+  rules_qa = [{content_type: "text",
+               title: rules_text_button,
+               payload: 'RULES_PAYLOAD'}]
   payload = template_payload(welcome_title,welcome_subtitle,welcome_image_url,welcome_button)
-  return mbot.sendTemplate(event.user,payload).catch (err => console.log(err));
+  return mbot.sendTemplate(event.user,payload,rules_qa).catch (err => console.log(err));
 }
     
 function ask_question(event,user) {
@@ -165,7 +163,7 @@ function ask_question(event,user) {
       i=rand_index(response.results);
       let question = response.results[i];
       let msg=question.question;
-      payload = template_payload("Question",msg,question.image.url)
+      payload = template_payload(msg,"",question.image.url)
       return store_question_data(user,question)
         .then(user=>mbot.sendTemplate(event.user,payload,get_answers(question.options)))
         .then(()=>timer(event,question.objectId));  
@@ -182,7 +180,6 @@ function timer(event,question_id) {
 
               user.custom.futbot.trivia_on = false;
               user.custom.futbot.out_of_time = true;
-              // user.custom.futbot_qanswered = true;
               return save_custom(user)
                 .then(()=>mbot.sendText(event.user, out_of_time))
                 .then(()=>{
@@ -192,39 +189,6 @@ function timer(event,question_id) {
                 .then(()=> welcome(event))
                 .then(()=> Promise.resolve());
 
-
-
-
-              // if (user.custom.futbot_qanswered_id == null) {
-              //   user.custom.futbot.trivia_on = false;
-              //   user.custom.futbot.out_of_time = true;
-              //   // user.custom.futbot_qanswered = true;
-              //   return save_custom(user)
-              //     .then(()=>mbot.sendText(event.user, out_of_time))
-              //     .then(()=>{
-              //       msg = `Score:${user.custom.futbot.actual_points}, Max Score:${user.custom.futbot.best_round}`
-              //       return mbot.sendText(event.user, msg)
-              //       })
-              //     .then(()=> welcome(event))
-              //     .then(()=> Promise.resolve());
-              // }else{
-              //   if (user.custom.futbot_qst == user.custom.futbot_qanswered_id) {
-              //     on_time = date_diff(user.custom.futbot_anstime, user.custom.futbot_qansweredTime) < wait_time
-              //     if (!on_time) {
-              //       user.custom.futbot.trivia_on = false;
-              //       user.custom.futbot.out_of_time = true;
-              //       // user.custom.futbot_qanswered = true;
-              //       return save_custom(user)
-              //         .then(()=>mbot.sendText(event.user, out_of_time))
-              //         .then(()=>{
-              //           msg = `Score:${user.custom.futbot.actual_points}, Max Score:${user.custom.futbot.best_round}`
-              //           return mbot.sendText(event.user, msg)
-              //           })
-              //         .then(()=> welcome(event))
-              //         .then(()=> Promise.resolve());
-              //     }
-              //   }
-              // }
             }
           }
           return Promise.resolve();
@@ -256,29 +220,30 @@ mbot.start()
   .catch(err => console.log("I failed setting the menu"))
 })
 
+mbot.listen({text: "RULES_PAYLOAD"}, (event) => {
+  welcome_button =[{
+                content_type:"text",
+                title:"Start Trivia",
+                payload:"TRIVIA_START_PAYLOAD"
+              }]
+  return mbot.sendText(event.user, rules,welcome_button);
+});
+
 mbot.listen({text: "TRIVIA_START_PAYLOAD"}, (event) => {
   return mbot.getUser(event.user)
     .then(user => {
       if (user.custom == null) {
-         return mbot.sendText(event.user, "Trivia begins")
-                .then(()=>init_trivia_data(user))
+         return init_trivia_data(user)
                 .then(user => ask_question(event,user))
       }
 
       if (user.custom.futbot == null){
-        return mbot.sendText(event.user, "Trivia begins")
-              .then(()=>init_trivia_data(user))
+        return init_trivia_data(user)
               .then(user => ask_question(event,user))
       }
 
       if (!user.custom.futbot.trivia_on) {
-        // if (!user.custom.futbot.out_of_time) {
-        //   return mbot.sendText(event.user, "Trivia begins")
-        //       .then(()=>init_trivia_data(user))
-        //       .then(user => ask_question(event,user))
-        // }
-        return mbot.sendText(event.user, "Trivia begins")
-              .then(()=>init_trivia_data(user))
+        return init_trivia_data(user)
               .then(user => ask_question(event,user))
       }
       
