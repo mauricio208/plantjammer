@@ -9,6 +9,7 @@
   "author": "Mauricio Machuca",
   "license": "ISC",
   "dependencies": {
+    "puid": "^1.0.7",
     "request": "^2.81.0",
     "request-promise": "^4.2.1"
   }

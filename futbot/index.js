@@ -1,16 +1,27 @@
 const Mbot = require('mbot');
 const rp = require('request-promise');
 const mbot = new Mbot({name: 'mm-test-bot'});
+const Puid = require('puid');
 
+/*Welcome template text*/
 const welcome_title = "Welcome to the futbot trivia";
 const welcome_subtitle = "Have fun pressing the start button";
 const welcome_image_url = "";
-const correct_msg = "That's correct! :)";
+
+/*Correct answer message*/
+const correct_msg = "🎉 🎉 🎉 \n\nThat's correct! :) \nGo for the next question?";
+
+/*Incorrect answer message*/
 const incorrect_msg = "That's not the answer :(";
+
+/*Time limit data*/
 const out_of_time = "Ups, out of time ⏰";
-const wait_time = 12;  // in seconds
+const wait_time = 13;  // in seconds
+
+/*Rules data*/
 const rules_text_button = "What are the rules?";
 const rules = `You have 7 seconds to answer each question \nEvery good answer give you a point \nIf your answer is wrong, end of game, you have to start all over again`;
+
 
 const sett = (resolve, t) => {
   setTimeout(resolve, t)
@@ -115,14 +126,15 @@ function request_trivia(user) {
   return options;
 }
 
-function store_question_data(user,question) {
-  user.custom.futbot_correct_ans= question.correct_answer;
-  user.custom.futbot_qst=question.objectId;
+function store_question_data(user,question,question_puid) {
+  user.custom.futbot_correct_ans = question.correct_answer;
+  user.custom.futbot_qst = question.objectId;
+  user.custom.futbot_qst_puid = question_puid
   user.custom.futbot_qanswered = false ;
   return save_custom(user);
 }
 
-function template_payload (title,subtitle,image_url,buttons) {
+function template_payload(title,subtitle,image_url,buttons) {
   return {
         "template_type":"generic",
         "elements":[
@@ -135,7 +147,25 @@ function template_payload (title,subtitle,image_url,buttons) {
         ]
       }
 }
-      
+function coorect_answer (event) {
+  ask_button =[{
+                content_type:"text",
+                title:"Yes!",
+                payload:"ASK_QST_PAYLOAD"
+              }]
+  return mbot.sendText(event.user, correct_msg,ask_button);
+}
+function score(event, actual_points, best_round) {
+  msg = `Score:${actual_points}, High score:${best_round}`
+  try_again_button =[{
+                "type":"postback",
+                "title":"Try again",
+                "payload":"TRIVIA_WELCOME_PAYLOAD"
+              }]
+  payload = template_payload(msg,"Try again!",null,try_again_button)
+  return mbot.sendTemplate(event.user, payload)
+}
+
 function welcome (event) {
   welcome_button =[{
                 "type":"postback",
@@ -154,19 +184,19 @@ function ask_question(event,user) {
     if (response.results.length === 0) {
       return store_best_round(user)
         .then(user=>{
-          msg = `Score:${user.custom.futbot.actual_points}, Max Score:${user.custom.futbot.best_round}`
-          return mbot.sendText(event.user, msg)
+          return score(event, user.custom.futbot.actual_points, user.custom.futbot.best_round)
         })
-        .then(()=> welcome(event))
         .then(()=>Promise.resolve());
     }else{
       i=rand_index(response.results);
       let question = response.results[i];
       let msg=question.question;
       payload = template_payload(msg,"",question.image.url)
-      return store_question_data(user,question)
+      let puid = new Puid();
+      let question_puid = puid.generate()
+      return store_question_data(user,question, question_puid)
         .then(user=>mbot.sendTemplate(event.user,payload,get_answers(question.options)))
-        .then(()=>timer(event,question.objectId));  
+        .then(()=>timer(event,question_puid));  
     }
   });
 }
@@ -176,17 +206,16 @@ function timer(event,question_id) {
         .then(()=> mbot.getUser(event.user))
         .then(user=>{
           if (!user.custom.futbot.out_of_time) {
-            if (!user.custom.futbot_qanswered && user.custom.futbot_qst==question_id) {
+            if (!user.custom.futbot_qanswered && user.custom.futbot_qst_puid==question_id) {
 
               user.custom.futbot.trivia_on = false;
               user.custom.futbot.out_of_time = true;
               return save_custom(user)
                 .then(()=>mbot.sendText(event.user, out_of_time))
                 .then(()=>{
-                  msg = `Score:${user.custom.futbot.actual_points}, Max Score:${user.custom.futbot.best_round}`
-                  return mbot.sendText(event.user, msg)
+                  return score(event, user.custom.futbot.actual_points, user.custom.futbot.best_round)
+
                   })
-                .then(()=> welcome(event))
                 .then(()=> Promise.resolve());
 
             }
@@ -220,6 +249,11 @@ mbot.start()
   .catch(err => console.log("I failed setting the menu"))
 })
 
+mbot.listen({text: "TRIVIA_WELCOME_PAYLOAD"}, (event) => {
+  return welcome(event)
+              .then(()=> Promise.resolve());
+});
+
 mbot.listen({text: "RULES_PAYLOAD"}, (event) => {
   welcome_button =[{
                 content_type:"text",
@@ -250,6 +284,11 @@ mbot.listen({text: "TRIVIA_START_PAYLOAD"}, (event) => {
     });
   });
 
+mbot.listen({text: "ASK_QST_PAYLOAD"}, (event) => {
+  return mbot.getUser(event.user)
+        .then(user=>ask_question(event, user));
+});
+
 mbot.listen({text: /.+/g}, (event) => {
   return mbot.getUser(event.user)
   .then(user=>{
@@ -258,9 +297,9 @@ mbot.listen({text: /.+/g}, (event) => {
     }else{
       if (user.custom.futbot.trivia_on) {
         if (user.custom.futbot_correct_ans.includes(event.text)) {
+
           return store_trivia_data(user,user.custom.futbot_qst,1)
-            .then(user=> mbot.sendText(event.user, correct_msg))
-            .then(()=>ask_question(event,user));
+            .then(()=> coorect_answer(event))
         }else{
           user.custom.futbot.trivia_on=false
           user.custom.futbot_qanswered = true;
@@ -271,16 +310,16 @@ mbot.listen({text: /.+/g}, (event) => {
                   })
                   .then(()=> mbot.sendText(event.user, msg))
                   .then(()=>{
-                    msg = `Score:${user.custom.futbot.actual_points}, Max Score:${user.custom.futbot.best_round}`
-                    return mbot.sendText(event.user, msg)
+                    return score(event, user.custom.futbot.actual_points, user.custom.futbot.best_round)
+
                   })
-                  .then(() => mbot.getUser(event.user))
-                  .then(user => {
-                    if (!user.custom.futbot.out_of_time){
-                      return welcome(event)
-                    }
-                    return Promise.resolve();
-                  });
+                  // .then(() => mbot.getUser(event.user))
+                  // .then(user => {
+                  //   if (!user.custom.futbot.out_of_time){
+                  //     return welcome(event)
+                  //   }
+                  //   return Promise.resolve();
+                  // });
         }
       }else{
         if (!user.custom.futbot.out_of_time) {
