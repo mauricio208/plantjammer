@@ -16,7 +16,7 @@ const incorrect_msg = "That's not the answer :(";
 
 /*Time limit data*/
 const out_of_time = "Ups, out of time ⏰";
-const wait_time = 13;  // in seconds
+const wait_time = 9;  // in seconds
 
 /*Rules data*/
 const rules_text_button = "What are the rules?";
