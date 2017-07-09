@@ -249,7 +249,7 @@ mbot.start()
   .catch(err => console.log("I failed setting the menu"))
 })
 
-mbot.listen({text: "TRIVIA_WELCOME_PAYLOAD"}, (event) => {
+mbot.listen({text: "GET_STARTED_PAYLOAD"}, (event) => {
   return welcome(event)
               .then(()=> Promise.resolve());
 });
@@ -323,8 +323,7 @@ mbot.listen({text: /.+/g}, (event) => {
         }
       }else{
         if (!user.custom.futbot.out_of_time) {
-          return welcome(event)
-              .then(()=> Promise.resolve());
+          return welcome(event);
         }
         return Promise.resolve();
       }
