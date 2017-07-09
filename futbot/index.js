@@ -158,7 +158,7 @@ function score(event, actual_points, best_round) {
   msg = `Score:${actual_points}, High score:${best_round}`
   try_again_button =[{
                 "type":"postback",
-                "title":"Try again",
+                "title":"Spil igen",
                 "payload":"TRIVIA_WELCOME_PAYLOAD"
               }]
   payload = template_payload(msg,"Try again!",null,try_again_button)
@@ -256,7 +256,7 @@ mbot.listen({text: "GET_STARTED_PAYLOAD"}, (event) => {
 mbot.listen({text: "RULES_PAYLOAD"}, (event) => {
   welcome_button =[{
                 content_type:"text",
-                title:"Start Trivia",
+                title:"Spil med nu",
                 payload:"TRIVIA_START_PAYLOAD"
               }]
   return mbot.sendText(event.user, rules,welcome_button);
