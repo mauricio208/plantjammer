@@ -249,8 +249,7 @@ mbot.start()
 })
 
 mbot.listen({text: "GET_STARTED_PAYLOAD"}, (event) => {
-  return welcome(event)
-              .then(()=> Promise.resolve());
+  return welcome(event);
 });
 
 mbot.listen({text: "RULES_PAYLOAD"}, (event) => {
