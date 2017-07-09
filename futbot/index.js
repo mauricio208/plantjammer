@@ -4,24 +4,23 @@ const mbot = new Mbot({name: 'mm-test-bot'});
 const Puid = require('puid');
 
 /*Welcome template text*/
-const welcome_title = "Welcome to the futbot trivia";
-const welcome_subtitle = "Have fun pressing the start button";
+const welcome_title = "Velkommen til Byens Hold Trivia, Tryk for at spille med";
+const welcome_subtitle = "Kender du dit Byens Hold? Få din highscore og udfordr dine venner! Pøj Pøj!";
 const welcome_image_url = "";
 
 /*Correct answer message*/
-const correct_msg = "🎉 🎉 🎉 \n\nThat's correct! :) \nGo for the next question?";
+const correct_msg = `🎉 🎉 🎉\n\nRigtigt svar 💪 💪 💪\n\nEr du klar til næste spørgsmål?`;
 
 /*Incorrect answer message*/
-const incorrect_msg = "That's not the answer :(";
+const incorrect_msg = (correct_ans)=>{ return `😿 😿 😿\n\nDet rigtige svar er ${correct_ans} 😶 😶 😶`}
 
 /*Time limit data*/
 const out_of_time = "Ups, out of time ⏰";
 const wait_time = 9;  // in seconds
 
 /*Rules data*/
-const rules_text_button = "What are the rules?";
-const rules = `You have 7 seconds to answer each question \nEvery good answer give you a point \nIf your answer is wrong, end of game, you have to start all over again`;
-
+const rules_text_button = "Hvad går det ud på?";
+const rules = `Det er ret simpelt:\n\nDu har 7 sekunder til at svare rigtigt på spørgsmål hvor du får 3 svarmuligheder.\n\nSvarer du rigtigt får du endnu et spørgsmål 👍 Svarer du forkert skal du starte forfra 👎\n\nDin bedste winning streak kommer på highscoren og du kan udfordre dine venner og andet sjovt 🙌\n\nEr du klar på at spille med?`
 
 const sett = (resolve, t) => {
   setTimeout(resolve, t)
@@ -150,7 +149,7 @@ function template_payload(title,subtitle,image_url,buttons) {
 function coorect_answer (event) {
   ask_button =[{
                 content_type:"text",
-                title:"Yes!",
+                title:"Yessir!",
                 payload:"ASK_QST_PAYLOAD"
               }]
   return mbot.sendText(event.user, correct_msg,ask_button);
@@ -169,7 +168,7 @@ function score(event, actual_points, best_round) {
 function welcome (event) {
   welcome_button =[{
                 "type":"postback",
-                "title":"Start Trivia",
+                "title":"Spil med nu",
                 "payload":"TRIVIA_START_PAYLOAD"
               }]
   rules_qa = [{content_type: "text",
@@ -303,7 +302,7 @@ mbot.listen({text: /.+/g}, (event) => {
         }else{
           user.custom.futbot.trivia_on=false
           user.custom.futbot_qanswered = true;
-          msg=incorrect_msg
+          msg=incorrect_msg(user.custom.futbot_correct_ans[0]);
           return save_custom(user)
                   .then(user=>{
                     return store_best_round(user)
