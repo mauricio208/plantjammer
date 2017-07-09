@@ -12,15 +12,21 @@ const welcome_image_url = "";
 const correct_msg = `🎉 🎉 🎉\n\nRigtigt svar 💪 💪 💪\n\nEr du klar til næste spørgsmål?`;
 
 /*Incorrect answer message*/
-const incorrect_msg = (correct_ans)=>{ return `😿 😿 😿\n\nDet rigtige svar er ${correct_ans} 😶 😶 😶`}
+const incorrect_msg = (correct_ans)=> `😿 😿 😿\n\nDet rigtige svar er ${correct_ans} 😶 😶 😶`
 
 /*Time limit data*/
-const out_of_time = "Ups, out of time ⏰";
+const out_of_time = "Ups, For sent ⏰";
 const wait_time = 9;  // in seconds
 
 /*Rules data*/
 const rules_text_button = "Hvad går det ud på?";
 const rules = `Det er ret simpelt:\n\nDu har 7 sekunder til at svare rigtigt på spørgsmål hvor du får 3 svarmuligheder.\n\nSvarer du rigtigt får du endnu et spørgsmål 👍 Svarer du forkert skal du starte forfra 👎\n\nDin bedste winning streak kommer på highscoren og du kan udfordre dine venner og andet sjovt 🙌\n\nEr du klar på at spille med?`
+
+
+/*Score messages*/
+const score_general_msg = (actual_points,best_round) => `Score:${actual_points}, High score:${best_round}`
+const highscore_msg = (best_round)=> `Your high score is ${best_round}`
+
 
 const sett = (resolve, t) => {
   setTimeout(resolve, t)
@@ -154,14 +160,26 @@ function coorect_answer (event) {
               }]
   return mbot.sendText(event.user, correct_msg,ask_button);
 }
+
 function score(event, actual_points, best_round) {
-  msg = `Score:${actual_points}, High score:${best_round}`
+  msg = score_general_msg(actual_points,best_round)
   try_again_button =[{
                 "type":"postback",
                 "title":"Spil igen",
-                "payload":"TRIVIA_WELCOME_PAYLOAD"
+                "payload":"GET_STARTED_PAYLOAD"
               }]
-  payload = template_payload(msg,"Try again!",null,try_again_button)
+  payload = template_payload(msg,null,null,try_again_button)
+  return mbot.sendTemplate(event.user, payload)
+}
+
+function highscore(event, best_round) {
+  msg = highscore_msg(best_round)
+  try_again_button =[{
+                "type":"postback",
+                "title":"Spil igen",
+                "payload":"GET_STARTED_PAYLOAD"
+              }]
+  payload = template_payload(msg,null,null,try_again_button)
   return mbot.sendTemplate(event.user, payload)
 }
 
@@ -234,8 +252,8 @@ mbot.start()
       call_to_actions: [
         {
           type: "postback",
-          title:"Start again",
-          payload:"GET_STARTED_PAYLOAD"
+          title:"Highscoren",
+          payload:"GET_HIGHSCORE_PAYLOAD"
         },
         {
           type: "postback",
@@ -247,6 +265,11 @@ mbot.start()
   ])
   .catch(err => console.log("I failed setting the menu"))
 })
+
+mbot.listen({text: "GET_HIGHSCORE_PAYLOAD"}, (event) => {
+  return mbot.getUser(event.user)
+         .then(user=>highscore(event,user.custom.futbot.best_round));
+});
 
 mbot.listen({text: "GET_STARTED_PAYLOAD"}, (event) => {
   return welcome(event);
