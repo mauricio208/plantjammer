@@ -234,13 +234,13 @@ mbot.start()
       call_to_actions: [
         {
           type: "postback",
-          title:"Help",
-          payload:"DEVELOPER_DEFINED_PAYLOAD_FOR_HELP"
+          title:"Start again",
+          payload:"GET_STARTED_PAYLOAD"
         },
         {
           type: "postback",
-          title: "Start a New Order",
-          payload: "DEVELOPER_DEFINED_PAYLOAD_FOR_START_ORDER"
+          title: rules_text_button,
+          payload: "RULES_PAYLOAD"
         },
       ]
     }
