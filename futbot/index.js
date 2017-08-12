@@ -15,8 +15,10 @@ const correct_msg = `🎉 🎉 🎉\n\nRigtigt svar 💪 💪 💪\n\nEr du klar
 const incorrect_msg = (correct_ans)=> `😿 😿 😿\n\nDet rigtige svar er ${correct_ans} 😶 😶 😶`
 
 /*Time limit data*/
-const out_of_time = "Ups, For sent ⏰";
+const wait_time_for_user = 7
+const out_of_time_msg = `Ups, For sent ⏰\n\nD️u har kun ${wait_time_for_user} til at svare.`;
 const wait_time = 9;  // in seconds
+
 
 /*Rules data*/
 const rules_text_button = "Hvad går det ud på?";
@@ -228,7 +230,7 @@ function timer(event,question_id) {
               user.custom.futbot.trivia_on = false;
               user.custom.futbot.out_of_time = true;
               return save_custom(user)
-                .then(()=>mbot.sendText(event.user, out_of_time))
+                .then(()=>mbot.sendText(event.user, out_of_time_msg))
                 .then(()=>{
                   return score(event, user.custom.futbot.actual_points, user.custom.futbot.best_round)
 
