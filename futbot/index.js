@@ -27,7 +27,8 @@ const rules = `Det er ret simpelt:\n\nDu har 7 sekunder til at svare rigtigt på
 
 /*Score messages*/
 const score_general_msg = (actual_points,best_round) => `Score:${actual_points}, High score:${best_round}`
-const highscore_msg = (best_round)=> `Your high score is ${best_round}`
+const highscore_msg_title = (best_round)=> `Din bedste winning streak er ${best_round}`
+const highscore_msg_subtitle = (usr_position, total_players)=> `Du ligger på en ${usr_position} plads. Der er ${total_players} spillere på highscoren.`
 
 
 const sett = (resolve, t) => {
@@ -174,14 +175,39 @@ function score(event, actual_points, best_round) {
   return mbot.sendTemplate(event.user, payload)
 }
 
-function highscore(event, best_round) {
-  msg = highscore_msg(best_round)
+function get_usr_position_order_users(event, users) {
+  users.sort((u1,u2)=>{
+    return u2.custom.futbot.best_round - u1.custom.futbot.best_round;
+  })
+  user_index = users.findIndex(u=>{return u.fid == event.user})
+  return user_index;
+}
+
+function highscore(event, users) {
+  best_round = 0;
+  position = 0;
+  players = 0;
+  if (users.length > 0) {
+    user_index = get_usr_position_order_users(event, users);
+    position = user_index+1;
+    if (position == 0) {
+      best_round = 0
+    }else{
+      user = users[user_index];
+      best_round = user.custom.futbot.best_round
+    }
+    players = users.length
+  }
+  
+
+  msg_title = highscore_msg_title(best_round)
+  msg_subtitle = highscore_msg_subtitle(position, players)
   try_again_button =[{
                 "type":"postback",
                 "title":"Spil igen",
                 "payload":"GET_STARTED_PAYLOAD"
               }]
-  payload = template_payload(msg,null,null,try_again_button)
+  payload = template_payload(msg_title,msg_subtitle,null,try_again_button)
   return mbot.sendTemplate(event.user, payload)
 }
 
@@ -269,8 +295,9 @@ mbot.start()
 })
 
 mbot.listen({text: "GET_HIGHSCORE_PAYLOAD"}, (event) => {
-  return mbot.getUser(event.user)
-         .then(user=>highscore(event,user.custom.futbot.best_round));
+  return mbot.getFacebookUser()
+         .find({"custom.futbot":{$exists:true}})
+         .then(users=>highscore(event,users));
 });
 
 mbot.listen({text: "GET_STARTED_PAYLOAD"}, (event) => {
