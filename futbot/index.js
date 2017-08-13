@@ -26,7 +26,8 @@ const rules = `Det er ret simpelt:\n\nDu har 7 sekunder til at svare rigtigt på
 
 
 /*Score messages*/
-const score_general_msg = (actual_points,best_round) => `Score:${actual_points}, High score:${best_round}`
+const score_general_msg_title = (actual_points) => `Du fik ${actual_points} rigtige`
+const score_general_msg_subtitle = (best_round, usr_position) => `Din bedste winning streak er ${best_round}. Du ligger på en ${usr_position} plads på highscoren.`
 const highscore_msg_title = (best_round)=> `Din bedste winning streak er ${best_round}`
 const highscore_msg_subtitle = (usr_position, total_players)=> `Du ligger på en ${usr_position} plads. Der er ${total_players} spillere på highscoren.`
 
@@ -164,23 +165,30 @@ function coorect_answer (event) {
   return mbot.sendText(event.user, correct_msg,ask_button);
 }
 
+function get_usr_position_order_users(user, users) {
+  users.sort((u1,u2)=>{
+    return u2.custom.futbot.best_round - u1.custom.futbot.best_round;
+  })
+  user_index = users.findIndex(u=>{return u.fid == user})
+  return user_index;
+}
+
 function score(event, actual_points, best_round) {
-  msg = score_general_msg(actual_points,best_round)
-  try_again_button =[{
+  return mbot.getFacebookUser()
+    .find({"custom.futbot":{$exists:true}})
+    .then(users=> {
+      user_index = get_usr_position_order_users(event.user,users)
+      msg_title = score_general_msg_title(actual_points)
+      msg_subtitle = score_general_msg_subtitle(best_round, user_index+1)
+      try_again_button =[{
                 "type":"postback",
                 "title":"Spil igen",
                 "payload":"GET_STARTED_PAYLOAD"
               }]
-  payload = template_payload(msg,null,null,try_again_button)
-  return mbot.sendTemplate(event.user, payload)
-}
-
-function get_usr_position_order_users(event, users) {
-  users.sort((u1,u2)=>{
-    return u2.custom.futbot.best_round - u1.custom.futbot.best_round;
-  })
-  user_index = users.findIndex(u=>{return u.fid == event.user})
-  return user_index;
+      payload = template_payload(msg_title,msg_subtitle,null,try_again_button)
+      return mbot.sendTemplate(event.user, payload)
+    });
+  
 }
 
 function highscore(event, users) {
@@ -188,7 +196,7 @@ function highscore(event, users) {
   position = 0;
   players = 0;
   if (users.length > 0) {
-    user_index = get_usr_position_order_users(event, users);
+    user_index = get_usr_position_order_users(event.user, users);
     position = user_index+1;
     if (position == 0) {
       best_round = 0
@@ -326,11 +334,9 @@ mbot.listen({text: "TRIVIA_START_PAYLOAD"}, (event) => {
               .then(user => ask_question(event,user))
       }
 
-      if (!user.custom.futbot.trivia_on) {
-        return init_trivia_data(user)
-              .then(user => ask_question(event,user))
-      }
-      
+      return init_trivia_data(user)
+        .then(user => ask_question(event,user))
+            
     });
   });
 
