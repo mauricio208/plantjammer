@@ -244,7 +244,7 @@ function ask_question(event,user) {
       i=rand_index(response.results);
       let question = response.results[i];
       let msg=question.question;
-      payload = template_payload(msg,"",question.image.url)
+      payload = template_payload(msg,"",question.image_url)
       let puid = new Puid();
       let question_puid = puid.generate()
       return store_question_data(user,question, question_puid)
