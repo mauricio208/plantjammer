@@ -3,9 +3,7 @@ const rp = require('request-promise');
 // const schedule = require('node-schedule');
 const Promise = require('bluebird');
 
-const mbot = new Mbot({ name: 'plantjammer' });
-
-
+const mbot = new Mbot({ name: 'plantjammer' }); //https://www.facebook.com/PlantJammer-2049543135290967/
 
 const getRandomFromArray = (array) => array[Math.floor(Math.random() * array.length)]
 
@@ -93,11 +91,7 @@ mbot.listen({
     .then(() => {
       return mbot.sendText(
         event.user,
-        `
-          A) Why eat plants?
-          B) How can I feel full when not eating meat?
-          C) How can I make veggies delicious?
-        `,
+        `A) Why eat plants?\nB) How can I feel full when not eating meat?\nC) How can I make veggies delicious?`,
         [
           {
             content_type: "text",
@@ -148,8 +142,8 @@ mbot.listen({
       return mbot.sendText(
         event.user,
         `
-          B) How can I feel full when not eating meat?\n
-          C) How can I make veggies delicious?\n
+          B. How can I feel full when not eating meat?\n
+          C. How can I make veggies delicious?\n
           2. Try Plant Jammer's cooking assistant!
         `,
         [
@@ -189,11 +183,7 @@ mbot.listen({
     .then(() => {
       return mbot.sendText(
         event.user,
-        `
-          1) What is umami?\n
-          2) Give me a plant protein\n
-          3) Give me a plant fibre\n
-        `,
+        `1) What is umami?\n2) Give me a plant protein\n3) Give me a plant fibre\n`,
         [
           {
             content_type: "text",
@@ -232,13 +222,34 @@ mbot.listen({
         event.user,
         {
           template_type: "button",
-          text: 'Want to cook with Umami? Choose one and see what it goes with: White mushrooms, Tomatoes, miso, soy sauce, parmesan',
+          text: 'Want to cook with Umami? Choose one and see what it goes with:',
           buttons: [
             {
               type: 'web_url',
-              title: 'plantjammer.com',
-              url: 'https://www.app.plantjammer.com/myfridge',
+              title: 'White mushrooms',
+              url: 'https://www.app.plantjammer.com/waterfall/salad/294',
+            },
+            {
+              type: 'web_url',
+              title: 'Tomatoes',
+              url: 'https://www.app.plantjammer.com/waterfall/salad/277',
+            },
+            {
+              type: 'web_url',
+              title: 'Miso',
+              url: 'https://www.app.plantjammer.com/waterfall/salad/172',
+            },
+            {
+              type: 'web_url',
+              title: 'Soy sauce',
+              url: 'https://www.app.plantjammer.com/waterfall/salad/255',
+            },
+            {
+              type: 'web_url',
+              title: 'Parmesan',
+              url: 'https://www.app.plantjammer.com/waterfall/salad/193',
             }
+          ]
           ]
 
         }
@@ -254,22 +265,31 @@ mbot.listen({
 
   return mbot.getUser(event.user)
     .then(() => {
-      return mbot.sendText(
-        event.user,
-        `You don't need meat for protein. There is plenty of protein in these plants:`
-      )
-    })
-    .then(() => {
       return mbot.sendTemplate(
         event.user,
         {
           template_type: "button",
-          text: 'Quinoa, Chickpeas, Lentils, Edamame beans, Black beans',
+          text: `You don't need meat for protein.There is plenty of protein in these plants:`,
           buttons: [
             {
               type: 'web_url',
-              title: 'plantjammer.com',
-              url: 'https://www.app.plantjammer.com/myfridge',
+              title: 'Quinoa',
+              url: 'https://www.app.plantjammer.com/waterfall/salad/225',
+            },
+            {
+              type: 'web_url',
+              title: 'Chickpeas',
+              url: 'https://www.app.plantjammer.com/waterfall/salad/64',
+            },
+            {
+              type: 'web_url',
+              title: 'Edamame',
+              url: 'https://www.app.plantjammer.com/waterfall/salad/99',
+            },
+            {
+              type: 'web_url',
+              title: 'Lentils',
+              url: 'https://www.app.plantjammer.com/waterfall/salad/156',
             }
           ]
 
@@ -285,22 +305,31 @@ mbot.listen({
 
   return mbot.getUser(event.user)
     .then(() => {
-      return mbot.sendText(
-        event.user,
-        `Fibres do wonders to your gut health. Eat them plentiful! Here are some sources:`
-      )
-    })
-    .then(() => {
       return mbot.sendTemplate(
         event.user,
         {
           template_type: "button",
-          text: 'Cabbage, Green peas, Avocados, Broccoli',
+          text: 'Fibres do wonders to your gut health. Eat them plentiful! Here are some sources:',
           buttons: [
             {
               type: 'web_url',
-              title: 'plantjammer.com',
-              url: 'https://www.app.plantjammer.com/myfridge',
+              title: 'Cabbage',
+              url: 'https://www.app.plantjammer.com/waterfall/salad/43',
+            },
+            {
+              type: 'web_url',
+              title: 'Green peas',
+              url: 'https://www.app.plantjammer.com/waterfall/salad/131',
+            },
+            {
+              type: 'web_url',
+              title: 'Avocado',
+              url: 'https://www.app.plantjammer.com/waterfall/salad/12',
+            },
+            {
+              type: 'web_url',
+              title: 'Broccoli',
+              url: 'https://www.app.plantjammer.com/waterfall/salad/35',
             }
           ]
 
@@ -324,10 +353,7 @@ mbot.listen({
     .then(() => {
       return mbot.sendText(
         event.user,
-        `
-          1) Take an aroma-bomb dish and make it yours
-          2) Make an aroma experiment in your home
-        `,
+        `1) Take an aroma-bomb dish and make it yours\n2) Make an aroma experiment in your home`,
         [
           {
             content_type: "text",
@@ -357,25 +383,30 @@ mbot.listen({
       )
     })
     .then(() => {
-      return mbot.sendText(
+      return mbot.sendTemplate(
         event.user,
-        `
-           1) Beetroot aroma bomb\n
-           2) Celery root bonanza\n
-           3) Eggplant pizza
-        `,
-        // [
-        //   {
-        //     content_type: "text",
-        //     title: "1",
-        //     payload: "AROMA_BOMB"
-        //   },
-        //   {
-        //     content_type: "text",
-        //     title: "2",
-        //     payload: "AROMA_EXPERIMENT"
-        //   }
-        // ]
+        {
+          template_type: "button",
+          text: '1) Beetroot aroma bomb\n2) Celery root bonanza\n3) Eggplant pizza',
+          buttons: [
+            {
+              type: 'web_url',
+              title: '1',
+              url: 'https://www.app.plantjammer.com/cooking/b237b6d6a0dcd674ca7b19b01a2269426b28e8e3',
+            },
+            {
+              type: 'web_url',
+              title: '2',
+              url: 'https://www.app.plantjammer.com/cooking/d14b3c9b8cbb2e9d1e3428fc2c62621134ccf3ec',
+            },
+            {
+              type: 'web_url',
+              title: '3',
+              url: 'https://www.app.plantjammer.com/cooking/3d3f51454c54ba7d094568be694921f0eb0965e9',
+            }
+          ]
+
+        }
       )
     })
 })
@@ -395,23 +426,7 @@ mbot.listen({
     .then(() => {
       return mbot.sendText(
         event.user,
-        `
-           1) Raw carrot\n\n
-           2) Carrot fried in a bit of oil on a pan for 10 minutes until golden\n\n
-           3) Carrot from (2), but with a bit of cinnamon in the oil and topped with a squeeze of lemon juice
-        `,
-        // [
-        //   {
-        //     content_type: "text",
-        //     title: "1",
-        //     payload: "AROMA_BOMB"
-        //   },
-        //   {
-        //     content_type: "text",
-        //     title: "2",
-        //     payload: "AROMA_EXPERIMENT"
-        //   }
-        // ]
+        `1) Raw carrot\n2) Carrot fried in a bit of oil on a pan for 10 minutes until golden\n3) Carrot from (2), but with a bit of cinnamon in the oil and topped with a squeeze of lemon juice`
       )
     })
     .then(() => {
